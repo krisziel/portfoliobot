@@ -5,12 +5,10 @@ require 'yahoo-finance'
 require 'sqlite3'
 
 module PortfolioBot
-  def self.format_currency number
-    parts = number.to_s.split('.')
-    parts[0].gsub!(/(\d)(?=(\d\d\d)+(?!\d))/, "\\1,")
-    amount = parts.join('.')
+  def self.format_currency number, direction = false
+    amount = format_number(number, true)
     formatted = ""
-    if amount.to_f > 0
+    if amount.to_f > 0 && direction
       formatted = "+$#{amount}"
     elsif amount.to_f < 0
       formatted = amount.insert(1, "$")
@@ -31,5 +29,15 @@ module PortfolioBot
       end
     end
     return colors[10 + (color_index * negative)]
+  end
+  def self.format_number number, trailing = false
+    number = sprintf "%.2f", number
+    parts = number.to_s.split('.')
+    parts[0].gsub!(/(\d)(?=(\d\d\d)+(?!\d))/, "\\1,")
+    if number.to_f%1 == 0 && !trailing
+      return parts[0]
+    else
+      return parts.join('.')
+    end
   end
 end

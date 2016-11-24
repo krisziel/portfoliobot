@@ -1,83 +1,74 @@
 module PortfolioBot
   class Portfolio
     def initialize user
-      self.user = user
+      @user = user
     end
     def positions
-      positions = $db.execute("SELECT * FROM positions WHERE user=?", [user])
+      positions = $db.execute("SELECT * FROM positions WHERE user=?", [@user])
       if positions.count == 0
         positions = []
       end
+      portfolio_stats = { cost: 0, value: 0, positions: positions.count }
+      position_attachments = []
+      positions.each do |position|
+        position_data = build_position_attachment(position)
+        portfolio_stats[:cost] += position_data[:stats][:cost]
+        portfolio_stats[:value] += position_data[:stats][:value]
+        position_attachments<<position_data[:attachment]
+      end
+      position_attachments.unshift(position_attachment portfolio_stats)
+      return position_attachments
+    end
+    def position_attachment stats
+      current_value = stats[:value]
+      cost_basis = stats[:cost]
+      positions = stats[:positions]
+      value_change = (current_value - cost_basis)
+      percent_change = (value_change / cost_basis)*100
+      color = PortfolioBot.color_range percent_change
+      cost_basis_text = "#{positions} #{(positions == 1 ? 'position' : 'positions')} with cost basis of #{PortfolioBot.format_currency(cost_basis)}"
+      current_value_text = "Value: *#{PortfolioBot.format_currency(current_value)} (#{PortfolioBot.format_currency(value_change, true)} // #{percent_change.round(2)}%)*"
+      text = "#{cost_basis_text}\n#{current_value_text}"
+      attachment = { fallback: text, color: color, text: text, mrkdwn_in: ["text"] }
     end
     def share_positions symbol
     end
     def add_position text
       position_matcher = /\$([a-zA-Z]{1,5}) ([0-9.]*)\@([\$0-9.]*)/
       position_data = text.match(position_matcher)
-      symbol = position_data[1]
+      symbol = position_data[1].upcase
       shares = position_data[2]
       price = position_data[3]
-      position_data = [symbol, price, shares, user]
-      db.execute("INSERT INTO positions (symbol, price, shares, user) VALUES(?, ?, ?, ?)", position_data)
-    end
-    def attachments
+      position_data = [symbol, price, shares, @user]
+      $db.execute("INSERT INTO positions (symbol, price, shares, user) VALUES(?, ?, ?, ?)", position_data)
+      return add_position_attachment(position_data)
     end
     def build_position_attachment position
       symbol = position[0]
-      shares = position[1]
-      price = position[2]
+      price = position[1].to_f
+      shares = position[2].to_f
       stock = Stock.new symbol
-      cost_basis = (shares.to_f * price.to_f)
-      current_value = (shares.to_f * stock.last_trade_price)
+      cost_basis = (shares * price)
+      current_value = (shares * stock.share_data.last_trade_price.to_f)
       value_change = (current_value - cost_basis)
-      percent_change = (value_change / costs_basis)
+      percent_change = (value_change / cost_basis)*100
       color = PortfolioBot.color_range percent_change
-      cost_basis = "Cost basis: $#{cost_basis}"
-      current_value = "Current value: $#{current_value} ()"
+      # title = "#{PortfolioBot.format_number(shares)} #{(shares == 1 ? 'share' : 'shares')} of #{symbol} purchased at $#{PortfolioBot.format_number(price)}"
+      # cost_basis = "Cost basis: #{PortfolioBot.format_currency(cost_basis)}"
+      cost_basis_text = "*#{symbol}* cost #{PortfolioBot.format_currency(cost_basis)} (#{PortfolioBot.format_number(shares)} #{(shares == 1 ? 'share' : 'shares')} at #{PortfolioBot.format_currency(price)})"
+      current_value_text = "Value: *#{PortfolioBot.format_currency(current_value)} (#{PortfolioBot.format_currency(value_change, true)} // #{percent_change.round(2)}%)*"
+      text = "#{cost_basis_text}\n#{current_value_text}"
+      attachment = { fallback: "#{symbol} - #{text}", color: color, text: text, mrkdwn_in: ["text"] }
+      position_stats = { cost: cost_basis, value: current_value }
+      return { attachment: attachment, stats: position_stats }
     end
     def add_position_attachment data
-      symbol = position[0]
-      shares = position[1]
-      price = position[2]
+      symbol = data[0]
+      price = data[1]
+      shares = data[2]
       cost_basis = (shares.to_f * price.to_f)
-      text = "You added #{shares} #{(shares == 1 ? 'share' : 'shares')} of #{symbol} with cost basis of #{PortfolioBot.format_currency(cost_basis)}"
+      text = "You added #{PortfolioBot.format_number(shares)} #{(shares == 1 ? 'share' : 'shares')} of #{symbol} at #{PortfolioBot.format_currency(price)} (cost basis of #{PortfolioBot.format_currency(cost_basis)})"
+      return text
     end
   end
 end
-
-
-# var shareCount = "You added " + args.shares + " " + (args.shares === 1 ? "share" : "shares") + " of " + args.symbol;
-# var percentChange = (percentChange >= 0 ? "-" : "+") + percentChange + "%"
-# var costBasis = "Cost basis is $" + basis + ", current value is " + value + " (" + percentChange + ")";
-# var fallback = company + " - " + shareCount + " - " + costBasis;
-# var title = "<https://finance.yahoo.com/quote/" + symbol + "|" + stock.company + " (" + symbol + ")>";
-# var text = shareCount + "\n" + costBasis;
-# var color = (value > basis) ? "#3d9400" : "#dd4b39";
-# var message = { attachments: JSON.stringify([{ fallback:fallback, color:color, title:title, text:text, mrkdwn:true }]) }
-# self.postMessageToChannel(args.channel.name, "", message);
-# };
-#
-# StocksBot.prototype._replyWithPortfolio = function (originalMessage) {
-# var self = this;
-#
-# };
-#
-# StocksBot.prototype._getStockPrice = function (symbol, callback, args) {
-# var self = this;
-# var url = 'http://finance.yahoo.com/d/quotes.csv?s=' + symbol + '&f=ncl1'
-# request(url, function(err, res, body){
-#   if(err) {
-#     return null;
-#   } else {
-#     var symbolRegexp = /\"([\w \,\.]*)\",\"([0-9\+\-\. \%]*)\"\,([\d\.]*)/;
-#     var shareData = symbolRegexp.exec(body);
-#     if(!shareData) {
-#       return null;
-#     }
-#     var company = shareData[1];
-#     var change = shareData[2].replace(/^\+/, "+$").replace(/^\-/, "-$").replace(" - ", " / ");
-#     var current = shareData[3];
-#     var stock = { company:company, change:change, current:current };
-#     callback(args);
-#   }
-# });
