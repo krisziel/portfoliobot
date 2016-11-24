@@ -1,16 +1,47 @@
 module PortfolioBot
   class Portfolio
     def initialize user
+      self.user = user
     end
-    def new user
+    def positions
+      positions = $db.execute("SELECT * FROM positions WHERE user=?", [user])
+      if positions.count == 0
+        positions = []
+      end
     end
-    def retrieve user
+    def share_positions symbol
     end
-    def retrieve_share user, symbol
-    end
-    def add_position
+    def add_position text
+      position_matcher = /\$([a-zA-Z]{1,5}) ([0-9.]*)\@([\$0-9.]*)/
+      position_data = text.match(position_matcher)
+      symbol = position_data[1]
+      shares = position_data[2]
+      price = position_data[3]
+      position_data = [symbol, price, shares, user]
+      db.execute("INSERT INTO positions (symbol, price, shares, user) VALUES(?, ?, ?, ?)", position_data)
     end
     def attachments
+    end
+    def build_position_attachment position
+      symbol = position[0]
+      shares = position[1]
+      price = position[2]
+      stock = Stock.new symbol
+      cost_basis = (shares.to_f * price.to_f)
+      current_value = (shares.to_f * stock.last_trade_price)
+      value_change = (current_value - cost_basis)
+      percent_change = (value_change / costs_basis)
+      color = PortfolioBot.color_range percent_change
+      cost_basis = "Cost basis: $#{cost_basis}"
+      current_value = "Current value: $#{current_value} ()"
+    end
+    def add_position_attachment data
+      symbol = position[0]
+      shares = position[1]
+      price = position[2]
+      cost_basis = (shares.to_f * price.to_f)
+      text = "You added #{shares} #{(shares == 1 ? 'share' : 'shares')} of #{symbol} with cost basis of #{PortfolioBot.format_currency(cost_basis)}"
+    end
   end
 end
 
