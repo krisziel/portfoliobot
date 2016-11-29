@@ -19,21 +19,19 @@ end
 
 client.on :message do |data|
   user = data.user
-  text = data.text.downcase
+  text = data.text.upcase
   next if client.self.id == user
-  share_match = /\$([A-Za-z]{1,5})/
-  position_match = /\$([a-zA-Z]{1,5}) ([0-9.]*)\@([\$0-9.]*)/
-  portfolio_share_match = /^portfolio \$([A-Za-z]{1,5})/
-  portfolio_match = /^portfolio/
-  puts portfolios
-  if text.match(position_match) || text.match(portfolio_match)
+  share_match = /\$([A-Z]{1,5})/
+  position_match = /\$([A-Z]{1,5}) ([0-9.]*)\@([\$0-9.]*)/
+  portfolio_share_match = /([A-Z]{1,5}) (PORTFOLIO|POSITIONS)/
+  portfolio_match = /^(PORTFOLIO|POSITIONS)/
+  if text.match(position_match) || text.match(portfolio_match) || text.match(portfolio_share_match)
     if portfolios[user]
       portfolio = portfolios[user]
     else
       portfolio = PortfolioBot::Portfolio.new user
       portfolios[user] = portfolio
     end
-    puts portfolio
   end
   case text
   when position_match then
@@ -41,6 +39,7 @@ client.on :message do |data|
     client.web_client.chat_postMessage channel: data.channel, text: new_position, as_user: true
   when portfolio_share_match then
     symbol = text.match(portfolio_share_match)[1]
+    puts portfolio
     share_positions = portfolio.share_positions symbol
     client.web_client.chat_postMessage channel: data.channel, attachments: share_positions, as_user: true
   when portfolio_match then

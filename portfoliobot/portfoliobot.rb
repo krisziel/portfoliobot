@@ -18,7 +18,7 @@ module PortfolioBot
     return formatted
   end
   def self.color_range percent
-    fibonacci = [1, 2, 3, 5, 8, 13, 21, 34, 55, 10946]
+    fibonacci = [1, 2, 3, 5, 8, 13, 21, 34, 55, 83204000]
     colors = ["b0120a", "c41411", "d01716", "dd191d", "e51c23", "e84e40", "f36c60", "f69988", "f9bdbb", "fde0dc", "eeeeee", "d0f8ce", "a3e9a4", "72d572", "42bd41", "2baf2b", "259b24", "0a8f08", "0a7e07", "056f00", "0d5302"]
     color_index = 0
     negative = (percent < 0 ? -1 : 1)

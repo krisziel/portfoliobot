@@ -9,13 +9,13 @@ module PortfolioBot
     end
     def attachments
       share_data = @share_data
-      if share_data.name == "N/A"
+      if share_data.name != "N/A"
         color = PortfolioBot.color_range share_data.change_in_percent.to_f
         change_text = "#{PortfolioBot.format_currency(share_data.change)} // #{share_data.change_in_percent}"
         text = "$#{share_data.last_trade_price} (#{change_text})"
         attachment = { fallback: "#{share_data.name} - #{text}", color: color, title: "<https://finance.yahoo.com/quote/#{share_data.symbol}|#{share_data.name} (#{share_data.symbol})>", text: text, mrkdwn: true }
       else
-        attachment = { fallback: "#{share_data.symbol} is not a valid symbol.", text: "#{share_data.symbol} is not a valid symbol.", mrkdwn: true }
+        attachment = { pretext: "*#{share_data.symbol}* is not a valid symbol.", mrkdwn_in: ["pretext"] }
       end
       return [attachment]
     end
