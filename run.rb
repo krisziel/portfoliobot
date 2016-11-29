@@ -32,19 +32,21 @@ client.on :message do |data|
       portfolio = PortfolioBot::Portfolio.new user
       portfolios[user] = portfolio
     end
+    user = client.web_client.users_info user: user
+    username = user.user.name
   end
   case text
   when position_match then
     new_position = portfolio.add_position text
-    client.web_client.chat_postMessage channel: data.channel, text: new_position, as_user: true
+    client.web_client.chat_postMessage channel: "@#{username}", text: new_position, as_user: true
   when portfolio_share_match then
     symbol = text.match(portfolio_share_match)[1]
     puts portfolio
     share_positions = portfolio.share_positions symbol
-    client.web_client.chat_postMessage channel: data.channel, attachments: share_positions, as_user: true
+    client.web_client.chat_postMessage channel: "@#{username}", attachments: share_positions, as_user: true
   when portfolio_match then
     positions = portfolio.positions
-    client.web_client.chat_postMessage channel: data.channel, attachments: positions, as_user: true
+    client.web_client.chat_postMessage channel: "@#{username}", attachments: positions, as_user: true
   when share_match then
     symbol = text.match(share_match)[1]
     share_data = PortfolioBot::Stock.new symbol
